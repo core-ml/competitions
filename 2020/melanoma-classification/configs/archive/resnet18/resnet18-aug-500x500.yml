@@ -1,0 +1,125 @@
+description: resnet18-base-dropout-wd-balanced + random vertical/horizontal flip + subtract mean + cutout + no balance
+
+model:
+    name: classification
+    batch_size: 128
+    epochs: 1000
+    optimizer:
+      name: SGD
+      args:
+        lr: 0.01
+        weight_decay: 0.1
+      scheduler:
+        update: epoch
+        value: auc-roc
+        name: ReduceLROnPlateau
+        params:
+            mode: 'max'
+            factor: 0.1
+            patience: 5
+            verbose: true
+            threshold: 0.0001
+            threshold_mode: abs
+            min_lr: 0.00001
+    loss:
+      train:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+      val:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+    classes:
+      - 0
+      - 1
+    eval:
+      maximize_metric: specificity
+      maximize_mode: val
+    save:
+      period: 100
+      monitor: auc-roc
+      monitor_mode: max
+    load:
+      version: null
+      epoch: -1
+      load_best: False
+      resume_optimizer: False
+
+network:
+    name: neural_net
+    params:
+        config:
+        - name: resnet18
+          params:
+            in_channels: 3
+            pretrained: true
+        - name: AdaptiveAvgPool2d
+          params:
+            output_size:
+            - 1
+            - 1
+        - name: Flatten
+          params: {}
+        - name: Dropout
+          params:
+            p: 0.2
+        - name: Linear
+          params:
+            in_features: 512
+            out_features: 1
+
+data:
+  data_type: image
+  signal_transform:
+    train:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+    - name: SubtractMean
+      params:
+        mean:
+          - 104
+          - 117
+          - 123
+        dim: 0
+    - name: RandomVerticalFlip
+      params:
+        p: 0.5
+    - name: RandomHorizontalFlip
+      params:
+        p: 0.5
+    - name: RandomErasing
+      params:
+        p: 0.5
+
+    val:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+    - name: SubtractMean
+      params:
+        mean:
+          - 104
+          - 117
+          - 123
+        dim: 0
+  dataset:
+    name: classification_dataset
+    config:
+      - name: siim-isic-melanoma
+        version: v1.0-500x500
+    params:
+      train:
+        fraction: 1
+      val:
+        fraction: 1
+  collate_fn:
+    name: classification_collate
+    params: {}

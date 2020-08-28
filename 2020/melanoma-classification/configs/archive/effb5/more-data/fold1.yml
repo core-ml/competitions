@@ -1,0 +1,221 @@
+description: looking to replicate kaggle kernel + using CIFAR-10 baseline + balanced data per epoch + using effnet-b5-noisy-student + color jitter
+entity: dalmiaman
+project: melanoma-classification
+
+model:
+    name: classification
+    batch_size: 16
+    epochs: 20
+    optimizer:
+      name: AdamW
+      args:
+        lr: 0.000005
+        weight_decay: 0.1
+      scheduler:
+        name: 1cycle
+        update: batch
+        params:
+            max_lr: 0.0002
+            epochs: 20
+            steps_per_epoch: 696
+            pct_start: 0.2
+            div_factor: 32
+    loss:
+      train:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+      val:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+
+      test:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+    classes:
+      - 0
+      - 1
+    eval:
+      maximize_metric: specificity
+    save:
+      period: 2
+      monitor: auc-roc
+      monitor_mode: max
+    load:
+      version: null
+      epoch: -1
+      load_best: False
+      resume_optimizer: False
+
+network:
+    name: neural_net
+    params:
+        config:
+        - name: efficientnet
+          params:
+            variant: tf_efficientnet_b5
+            num_classes: 1
+            return_features: true
+        - name: AdaptiveAvgPool2d
+          params:
+            output_size:
+            - 1
+            - 1
+        - name: Flatten
+          params: {}
+        - name: Linear
+          params:
+            in_features: 2048
+            out_features: 1
+
+data:
+  data_type: image
+  signal_transform:
+    train:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+    - name: Rescale
+      params:
+        value: 255.
+    - name: RandomAffine
+      params:
+        degrees: 180
+        translate:
+          - 0.02
+          - 0.02
+    - name: RandomHorizontalFlip
+      params:
+        p: 0.5
+    - name: ColorJitter
+      params:
+        saturation:
+          - 0.7
+          - 1.3
+        contrast:
+          - 0.8
+          - 1.2
+        brightness: 0.1
+    - name: Normalize
+      params:
+        mean: imagenet
+        std: imagenet
+    - name: RandomErasing
+      params:
+        p: 0.5
+        ratio:
+          - 0.3
+          - 3.3
+        scale:
+          - 0.02
+          - 0.1
+
+    val:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+    - name: Rescale
+      params:
+        value: 255.
+    - name: RandomAffine
+      params:
+        degrees: 180
+        translate:
+          - 0.02
+          - 0.02
+    - name: RandomHorizontalFlip
+      params:
+        p: 0.5
+    - name: ColorJitter
+      params:
+        saturation:
+          - 0.7
+          - 1.3
+        contrast:
+          - 0.8
+          - 1.2
+        brightness: 0.1
+    - name: Normalize
+      params:
+        mean: imagenet
+        std: imagenet
+    - name: RandomErasing
+      params:
+        p: 0.5
+        ratio:
+          - 0.3
+          - 3.3
+        scale:
+          - 0.02
+          - 0.1
+
+    test:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+    - name: Rescale
+      params:
+        value: 255.
+    - name: RandomAffine
+      params:
+        degrees: 180
+        translate:
+          - 0.02
+          - 0.02
+    - name: RandomHorizontalFlip
+      params:
+        p: 0.5
+    - name: ColorJitter
+      params:
+        saturation:
+          - 0.7
+          - 1.3
+        contrast:
+          - 0.8
+          - 1.2
+        brightness: 0.1
+    - name: Normalize
+      params:
+        mean: imagenet
+        std: imagenet
+    - name: RandomErasing
+      params:
+        p: 0.5
+        ratio:
+          - 0.3
+          - 3.3
+        scale:
+          - 0.02
+          - 0.1
+
+  dataset:
+    name: classification_dataset
+    config:
+      - name: siim-isic-melanoma
+        version: v5.0.0
+    params: {}
+
+  sampler:
+    train:
+        name: classification
+        params:
+            mode: balanced
+    val:
+        name: default
+    test:
+        name: default
+
+  collate_fn:
+    name: classification_collate
+    params: {}

@@ -1,0 +1,85 @@
+description: efficientnet-b4 pretrained
+
+model:
+    name: classification
+    batch_size: 32
+    epochs: 1000
+    optimizer:
+      name: SGD
+      args:
+        lr: 0.1
+    loss:
+      train:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+      val:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+      test:
+        name: binary-cross-entropy
+        params:
+            reduction: none
+    classes:
+      - 0
+      - 1
+    eval:
+      maximize_metric: precision
+      maximize_mode: val
+    save:
+      period: 2
+      monitor: precision
+      monitor_mode: max
+    load:
+      version: null
+      epoch: -1
+      load_best: False
+      resume_optimizer: False
+
+network:
+    name: neural_net
+    params:
+        config:
+        - name: efficientnet-b4
+          params:
+            in_channels: 3
+            num_classes: 1
+
+data:
+  data_type: image
+  signal_transform:
+    train:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+    val:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+    test:
+    - name: Permute
+      params:
+        order:
+          - 2
+          - 0
+          - 1
+  dataset:
+    name: classification_dataset
+    config:
+      - name: siim-isic-melanoma
+        version: v1.0-200x200
+    params:
+      train:
+        fraction: 1
+      val:
+        fraction: 1
+  collate_fn:
+    name: classification_collate
+    params: {}
